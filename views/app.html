@@ -1,0 +1,55 @@
+<header class="header">
+    <h1>todos</h1>
+    <input class="new-todo" ng-keydown="add($event)" placeholder="What needs to be done?" ng-model="newTask" autofocus>
+</header>
+<!-- This section should be hidden by default and shown when there are todos -->
+<section class="main">
+    <input id="toggle-all" ng-change="toggleAll()" class="toggle-all" type="checkbox" ng-model="checkall">
+
+
+    <label for="toggle-all">Mark all as complete</label>
+    <ul class="todo-list">
+        <!-- These are here just to show the structure of the list items -->
+        <!-- List items should get the class `editing` when editing and `completed` when marked as completed -->
+
+        <!-- 可以使用filter过滤器，对当前数组中的所有的任务进行筛选
+            如果isCompleted属性为true 则就是所有的已经完成的任务
+            如果isCompleted属性为false 就是所有的未完成的任务
+            如果isCompleted属性为undefined 就是所有的任务！ -->
+        <li ng-repeat="item in todoList | filter: {isCompleted: status} track by $index" ng-class="{completed: item.isCompleted, editing: item.id == editingid}">
+            <div class="view">
+                <input class="toggle" type="checkbox" ng-model="item.isCompleted" ng-change="singleTaskCheck()">
+                <label ng-dblclick="edit(item.id)">{{item.title}}</label>
+                <button class="destroy" ng-click="del(item.id)"></button>
+            </div>
+            <input class="edit" ng-model="item.title" value="Create a TodoMVC template" ng-keydown="update($event)">
+        </li>
+        <!-- <li>
+                <div class="view">
+                    <input class="toggle" type="checkbox">
+                    <label>Buy a unicorn</label>
+                    <button class="destroy"></button>
+                </div>
+                <input class="edit" value="Rule the web">
+            </li> -->
+    </ul>
+</section>
+<!-- This footer should hidden by default and shown when there are todos -->
+<footer class="footer">
+    <!-- This should be `0 items left` by default -->
+    <span class="todo-count"><strong ng-bind="getLeftCount()">0</strong> item left</span>
+    <!-- Remove this if you don't implement routing -->
+    <ul class="filters">
+        <li>
+            <a ng-class="{selected: status==undefined}" href="#!/">All</a>
+        </li>
+        <li>
+            <a ng-class="{selected: status==false}" href="#!/active">Active</a>
+        </li>
+        <li>
+            <a ng-class="{selected: status==true}" href="#!/completed">Completed</a>
+        </li>
+    </ul>
+    <!-- Hidden if no completed items are left ↓ -->
+    <button class="clear-completed" ng-hide="isHideClrBtn" ng-click="clearAllComepleted()">Clear completed</button>
+</footer>

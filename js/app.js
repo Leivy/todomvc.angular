@@ -1,114 +1,132 @@
-(function (window) {
-	//'use strict';
+(function (angular) {
+	// 'use strict';
 
 	// Your starting point. Enjoy the ride!
-	//用angular渲染数据 展示列表
+
 	angular
-		.module('app', ["ngRoute", "crdu.module"])
-		.controller('cl', ['$scope', '$location', '$routeParams', 'crud', function ($scope, $location, $routeParams, crud) {
-			//1.展示列表 先假装有个初始化数据
-			$scope.todoList = crud.get();
+		.module("app", ["app.service", "ngRoute"])
+		.config(["$routeProvider", function($routeProvider){
+			$routeProvider
+				//什么样的路由规则及可以匹配
+				//  /
+				//  /active
+				//  /completed
+
+				//  /:status?
+				.when("/:status?", {
+					controller: "todoController",
+					templateUrl: "./views/app.html"
+				})
+		}])
+		.controller("todoController", ["$scope", "$location", "todoService", "$routeParams", function($scope, $location, todoService, $routeParams){
+			$scope.todoList = todoService.getData();
 			var todos = $scope.todoList;
 
-			//2. 添加任务 给输入框注册onkeydown事件 
-			$scope.addNewTodo = function ($event) {
-				if ($event.keyCode == 13 && $scope.newTitle) {
-					crud.add({
-						// id: todos.length > 0 ? 
-						id: !todos[todos.length - 1] ? 1 : (todos[todos.length - 1].id + 1),
-						title: $scope.newTitle.trim(),
-						isCompleted: false
-					})
-					//添加完成后清除输入框内容
-					$scope.newTitle = "";
+			$scope.add = function($event){
+				if($event.keyCode == 13 && $scope.newTask){
+					todoService.add(
+						{id: todos.length==0? 1 :todos[todos.length - 1].id + 1, title: $scope.newTask, isCompleted: false}
+					);
+					$scope.newTask = "";
 				}
-			};
+			}
 
-			//3. 删除一条任务 给按钮注册点击事件, 传入当前数据的id 删除数组中的当前数据
-			$scope.del = crud.del;
+			//3. 实现删除任务的功能
+			// $scope.del = todoService.del;
 
-			//4. 修改任务 双击文本框 显示文本框 
-			$scope.editingId = -1;
-			$scope.dblInput = function (id) {
-				//获取双击的当前数据 通过给li加类名editing来显示input框
-				$scope.editingId = id;
-			};
-			//input框输入修改内容
-			$scope.edit = function (e) {
-				//回车完成修改
-				if (e.keyCode == 13) {
-					$scope.editingId = -1;
+			$scope.del = function(id){
+				todoService.del(id);
+			}
+
+			//4. 编辑任务功能的实现
+			$scope.editingid = -1;
+			$scope.edit = function(id){
+				$scope.editingid = id;
+			}
+			
+			$scope.update = function($event){
+				if($event.keyCode == 13){
+					$scope.editingid = -1;
 				}
-			};
+			}
 
-			//5. 切换任务选中状态 
-			//全选按钮点击事件 列表状态跟随
-			$scope.selectAll = function () {
+			//5. 任务的单选完成状态实现，只需要给checkbox做双向数据绑定即可！
+			$scope.toggleAll = function(){
+				todoService.toggleAll($scope.checkall);
+			}
 
-				crud.selectAll($scope.allChecked)
-				$scope.isHide = !$scope.allChecked;
-				//修改未完成任务数
-				$scope.countLeft = todos.reduce(function (sum, v) {
-					return sum + (v.isCompleted == false ? 1 : 0);
-				}, 0);
-			};
-			//列表按钮点击事件  决定全选按钮状态
-			$scope.selectTodo = function () {
-				$scope.allChecked = todos.every(function (v, i) {
-					return v.isCompleted;
-				});
-				//观察列表按钮状态 决定清除按钮的状态
-				$scope.isHide = todos.every(function (v, i) {
+
+			$scope.singleTaskCheck = function(){
+				$scope.checkall = todos.every(function(v){
+					return v.isCompleted
+				})
+				$scope.isHideClrBtn = todos.every(function(v){
 					return !v.isCompleted;
-				});
-				//修改未完成任务数
-				$scope.countLeft = todos.reduce(function (sum, v) {
-					return sum + (v.isCompleted == false ? 1 : 0);
-				}, 0)
-			};
+				})
+			}
+			//6. 清除所有已经完成的任务
 
-			//6. 清除已完成任务 右下角 当没有完成事件时不显示 显示点击会清除所有已完成事件
-			$scope.clearAll = function () {
-				$scope.todoList = todos.filter(function (v, i) {
-					return !v.isCompleted;
-				});
-				todos = $scope.todoList;
-			};
+			// $scope.clearAllComepleted = todoService.clearAllComepleted;
+			$scope.clearAllComepleted = function(){
+				todoService.clearAllComepleted();
+			}
 
-			//7. 显示未完成任务数 记得在列表和全选按钮处都更新这个函数
-			$scope.countLeft = todos.reduce(function (sum, v) {
-				return sum + (v.isCompleted == false ? 1 : 0);
-			}, 0);
+			// $scope.getLeftCount = todoService.getLeftCount;
+			$scope.getLeftCount = function(){
+				return todoService.getLeftCount()
+			}
 
-			//8.显示不同状态的任务
+			//7.实现对数据的过滤筛选操作
+			// $scope.status = undefined;
 
-			//9. 根据URL变化显示相应任务 根据url显示列表
-			$scope.location = $location; //把服务$location赋值给$scope使用$watch监视
+			// console.log($routeParams);
+			//$routeParams里面有一个属性 status
+			//status 可能是 active        $scope.status = false
+			//status 可能是 completed     $scope.status = true
+			//status 可能是 undefined     $scope.status = undefined
+
+
+			// switch($routeParams.status){
+			// 	case "active":
+			// 		$scope.status = false;
+			// 		break;
+			// 	case "completed":
+			// 		$scope.status = true;
+			// 		break;
+			// 	default:
+			// 		$scope.status = undefined;
+			// }
+
 			var status = {
 				active: false,
 				completed: true
-			}
-			$scope.status = status[$routeParams.name];
-			// $scope.$watch('location.url()', function () {
-			// 	//用filter过滤器来筛选出要显示的内容
-			// 	switch ($location.url()) {
-			// 		case '/active':
+			};
+			$scope.status = status[$routeParams.status];
+			
+
+			// $scope.location = $location;
+			// $scope.$watch("location.url()", function(newValue, oldValue){
+			// 	//根据hash值的内容，对于页面展示的内容进行更改
+			// 	switch($location.url()){
+			// 		case "/active":
 			// 			$scope.status = false;
 			// 			break;
-			// 		case '/completed':
+			// 		case "/completed":
 			// 			$scope.status = true;
 			// 			break;
 			// 		default:
 			// 			$scope.status = undefined;
 			// 	}
+			// })
+		}])
 
-			// });
-		}])
-		.config(['$routeProvider', function ($routeProvider) {
-			$routeProvider
-				.when('/:name?', {
-					controller: 'cl',
-					templateUrl: './views/page.html'
-				})
-		}])
-})(window);
+		function test(name){
+			console.log(name);
+		}
+
+		var test1 = function(){
+			test("123");
+		}
+
+		test1();
+})(angular);
